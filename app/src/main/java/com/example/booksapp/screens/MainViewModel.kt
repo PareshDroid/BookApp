@@ -16,7 +16,17 @@ import javax.inject.Inject
 class MainViewModel @Inject constructor(private val repository: BooksRepository)
     : ViewModel(){
 
+    /**
+     * Create similar to below example
+     * private val _name = MutableStateFlow("John")
+     *     val name: StateFlow<String> = _name.asStateFlow()
+     *
+     *     fun updateName(newName: String) {
+     *         _name.value = newName
+     *     }
+     */
     private val _booksState = MutableStateFlow(DataOrException<Books, Boolean, Exception>())
+    //asStateFlow() is an extension function to expose a read-only version of a MutableStateFlow.
     val booksState: StateFlow<DataOrException<Books, Boolean, Exception>> = _booksState.asStateFlow()
 
     fun fetchBooks(quantity: String) {
