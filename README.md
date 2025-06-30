@@ -1,4 +1,3 @@
-Here’s a polished and complete **`README.md`** ready for your [BookApp](https://github.com/PareshDroid/BookApp) GitHub repo. You can copy this directly into your repository!
 
 ---
 
