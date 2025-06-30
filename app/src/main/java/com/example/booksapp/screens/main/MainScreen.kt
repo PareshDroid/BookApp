@@ -30,7 +30,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.NavigationDrawerItem
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -46,8 +45,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.example.booksapp.data.DataOrException
 import com.example.booksapp.model.Books
 import com.example.booksapp.model.Data
+import com.example.booksapp.repository.BooksRepository
 import com.example.booksapp.screens.MainViewModel
 import kotlinx.coroutines.launch
 
@@ -191,10 +192,12 @@ fun ErrorPreview() {
     MainScreenErrorContentStateless("This is a sample error message for preview.")
 }
 
+
 @Preview(showBackground = true, apiLevel = 34, device = "id:pixel_9",
     name = "Pixel 9 Preview")
 @Composable
 fun DefaultPreview() {
+
     val sampleBooks = Books(
         code = 200,
         data = listOf(
@@ -226,5 +229,28 @@ fun DefaultPreview() {
         status = "success",
         total = 1
     )
-    MainScreenContentStateless(books = sampleBooks)
+
+    class FakeBooksRepository : BooksRepository(null) {
+        override suspend fun getBooksData(quantity: String)
+                : DataOrException<Books, Boolean, Exception> {
+            // Return dummy data or whatever is needed for preview
+            return DataOrException(
+                data = sampleBooks,
+                loading = false,
+                e = null
+            )
+        }
+    }
+
+    val fakeViewModel = object : MainViewModel(FakeBooksRepository()) {
+        override val booksState = kotlinx.coroutines.flow.MutableStateFlow(
+            com.example.booksapp.data.DataOrException<Books, Boolean, Exception>(
+                data = sampleBooks,
+                loading = false,
+                e = null
+            )
+        )
+    }
+    val navController = androidx.navigation.compose.rememberNavController()
+    MainScreen(navController = navController, mainViewModel = fakeViewModel)
 }
