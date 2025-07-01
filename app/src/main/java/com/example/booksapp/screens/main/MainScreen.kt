@@ -1,14 +1,20 @@
 package com.example.booksapp.screens.main
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Menu
@@ -41,16 +47,21 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
 import com.example.booksapp.data.DataOrException
 import com.example.booksapp.model.Books
 import com.example.booksapp.model.Data
+import com.example.booksapp.navigation.BooksScreen
 import com.example.booksapp.repository.BooksRepository
-import com.example.booksapp.screens.MainViewModel
+import com.example.booksapp.screens.details.DetailViewModel
 import kotlinx.coroutines.launch
+import kotlin.random.Random
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,7 +84,13 @@ fun MainScreen(navController: NavController, mainViewModel: MainViewModel = hilt
                     icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
                     label = { Text("Home") },
                     selected = false,
-                    onClick = { /* Handle navigation */ }
+                    onClick = {
+                        scope.launch { drawerState.close() }
+                        navController.navigate("main") {
+                            launchSingleTop =
+                                true // Prevent multiple copies of the same destination
+                        }
+                    }
                 )
                 NavigationDrawerItem(
                     icon = { Icon(Icons.Default.Settings, contentDescription = "Profile") },
@@ -113,7 +130,7 @@ fun MainScreen(navController: NavController, mainViewModel: MainViewModel = hilt
             }
         ) { innerPadding ->
             Column(modifier = Modifier.padding(innerPadding)) {
-                MainScreenContent(mainViewModel)
+                MainScreenContent(mainViewModel,navController)
             }
         }
     }
@@ -122,13 +139,9 @@ fun MainScreen(navController: NavController, mainViewModel: MainViewModel = hilt
 
 
 @Composable
-fun MainScreenContent(mainViewModel: MainViewModel) {
+fun MainScreenContent(mainViewModel: MainViewModel,navController: NavController) {
     //collectAsState - Jetpack Compose API to observe StateFlow in Composables
     val dataOrException by mainViewModel.booksState.collectAsState()
-
-    LaunchedEffect(Unit) {
-        mainViewModel.fetchBooks("10")
-    }
 
     when {
         dataOrException.loading == true -> {
@@ -145,7 +158,7 @@ fun MainScreenContent(mainViewModel: MainViewModel) {
             )
         }
         dataOrException.data != null -> {
-            MainScreenContentStateless(dataOrException.data!!)
+            MainScreenContentStateless(dataOrException.data!!, navController)
         }
     }
 
@@ -161,7 +174,7 @@ fun MainScreenErrorContentStateless(errorMessage: String) {
 }
 
 @Composable
-fun MainScreenContentStateless(books: Books) {
+fun MainScreenContentStateless(books: Books, navController: NavController,detailViewModel: DetailViewModel = hiltViewModel()) {
     LazyColumn(
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -170,12 +183,34 @@ fun MainScreenContentStateless(books: Books) {
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(4.dp),
-                elevation = CardDefaults.cardElevation(4.dp)
+                    .padding(4.dp)
+                    .clickable {
+                        detailViewModel.selectBook(book)
+                        navController.navigate(BooksScreen.DetailScreen.name)
+                               },
+                elevation = CardDefaults.cardElevation(4.dp),
+                shape = RoundedCornerShape(12.dp)
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(book.title, style = MaterialTheme.typography.titleMedium)
-                    Text(book.author, style = MaterialTheme.typography.bodyMedium)
+                val randomNumber = Random.nextInt(1, 51)
+                Row( modifier = Modifier
+                    .padding(16.dp)
+                    .fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically) {
+                    Column(
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(book.title, style = MaterialTheme.typography.titleMedium)
+                        Text(book.author, style = MaterialTheme.typography.bodyMedium)
+                    }
+                    Spacer(modifier = Modifier.width(16.dp))
+                    AsyncImage(
+                        model = "https://picsum.photos/id/${randomNumber}/200/300",
+                        contentDescription = book.title,
+                        modifier = Modifier
+                            .size(72.dp)
+                            .clip(RoundedCornerShape(12.dp)),
+                        contentScale = ContentScale.Crop
+                    )
                 }
             }
         }
@@ -206,7 +241,7 @@ fun DefaultPreview() {
                 description = "A sample book for preview.",
                 genre = "Fiction",
                 id = 1,
-                image = "https://example.com/sample.jpg",
+                image = "https://picsum.photos/200",
                 isbn = "1234567890",
                 published = "2024",
                 publisher = "Sample Publisher",
@@ -217,7 +252,7 @@ fun DefaultPreview() {
                 description = "A sample book for preview.",
                 genre = "Fiction",
                 id = 1,
-                image = "https://example.com/sample.jpg",
+                image = "https://picsum.photos/200",
                 isbn = "1234567890",
                 published = "2024",
                 publisher = "Sample Publisher",

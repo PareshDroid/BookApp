@@ -1,4 +1,4 @@
-package com.example.booksapp.screens
+package com.example.booksapp.screens.main
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -29,6 +29,10 @@ open class MainViewModel @Inject constructor(private val repository: BooksReposi
     private val _booksState = MutableStateFlow(DataOrException<Books, Boolean, Exception>())
     //asStateFlow() is an extension function to expose a read-only version of a MutableStateFlow.
     open val booksState: StateFlow<DataOrException<Books, Boolean, Exception>> = _booksState.asStateFlow()
+
+    init {
+        fetchBooks("10")
+    }
 
     fun fetchBooks(quantity: String) {
         viewModelScope.launch {
