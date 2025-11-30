@@ -95,3 +95,4 @@ jobs:
         with:
           name: release-aab
           path: app/build/outputs/bundle/release/*.aab
+# Done
