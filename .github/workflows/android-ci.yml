@@ -1,4 +1,4 @@
-name: Android CI - Build & Test
+name: Android CI/CD Pipeline
 
 on:
   push:
@@ -9,16 +9,26 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout
+      # ---------------------------------------
+      # Step 1: Checkout code
+      # ---------------------------------------
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up JDK 17
+      # ---------------------------------------
+      # Step 2: Set up JDK 17
+      # ---------------------------------------
+      - name: Set up JDK
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
 
+      # ---------------------------------------
+      # Step 3: Cache Gradle
+      # ---------------------------------------
       - name: Cache Gradle
         uses: actions/cache@v4
         with:
@@ -29,14 +39,59 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      - name: Grant execute for gradlew
+      # ---------------------------------------
+      # Step 4: Give executable permission
+      # ---------------------------------------
+      - name: Grant execute permission for gradlew
         run: chmod +x ./gradlew
 
-      - name: Run lint
-        run: ./gradlew lint || echo "lint failed (non-blocking)"
+      # ---------------------------------------
+      # Step 5: Decode Keystore (for release build)
+      # ---------------------------------------
+      - name: Decode Keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          mkdir -p app/keystore
+          echo "$KEYSTORE_BASE64" | base64 --decode > app/keystore/release.jks
+          ls -l app/keystore
 
-      - name: Assemble Debug
+      # ---------------------------------------
+      # Step 6: Build Debug APK
+      # ---------------------------------------
+      - name: Build Debug APK
         run: ./gradlew assembleDebug --stacktrace
 
+      # ---------------------------------------
+      # Step 7: Run Unit Tests
+      # ---------------------------------------
       - name: Run Unit Tests
-        run: ./gradlew testDebugUnitTest --no-daemon --stacktrace
+        run: ./gradlew testDebugUnitTest --stacktrace
+
+      # ---------------------------------------
+      # Step 8: Build Release AAB
+      # ---------------------------------------
+      - name: Build Release AAB
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_ALIAS_PASSWORD: ${{ secrets.KEY_ALIAS_PASSWORD }}
+        run: ./gradlew bundleRelease --stacktrace
+
+      # ---------------------------------------
+      # Step 9: Upload Debug APK as Artifact
+      # ---------------------------------------
+      - name: Upload Debug APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-apk
+          path: app/build/outputs/apk/debug/*.apk
+
+      # ---------------------------------------
+      # Step 10: Upload Release AAB as Artifact
+      # ---------------------------------------
+      - name: Upload Release AAB Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-aab
+          path: app/build/outputs/bundle/release/*.aab
